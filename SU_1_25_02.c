@@ -360,7 +360,6 @@ int main() {
             ex_11();
             break;
         case 12:
-            //ex 12 doesn't work for some reason
             ex_12();
             break;
         case 13:
