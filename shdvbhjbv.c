@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <ctype.h>
 
 typedef struct {
     char name[100];
@@ -224,7 +225,198 @@ void ex_3() {
     free(words);
 }
 
-int main(){
-    ex_3();
+void ex_4() {
+    char filename[100];
+    int key;
+
+    printf("Enter filename: ");
+    scanf("%s", filename);
+
+    printf("Enter key (2-10): ");
+    scanf("%d", &key);
+
+    if (key < 2 || key > 10) {
+        printf("Key must be between 2 and 10!\n");
+        return;
+    }
+
+    // open input file for reading
+    FILE *input = fopen(filename, "r");
+    if (input == NULL) {
+        printf("Could not open file: %s\n", filename);
+        return;
+    }
+
+    // build output filename e.g. "text.txt" -> "text_encoded.txt"
+    char out_filename[110];
+    sprintf(out_filename, "encoded_%s", filename);
+
+    // open output file for writing
+    FILE *output = fopen(out_filename, "w");
+    if (output == NULL) {
+        printf("Could not create output file!\n");
+        fclose(input);
+        return;
+    }
+
+    // read char by char, shift each one by key, write to output
+    char c;
+    while ((c = fgetc(input)) != EOF) {
+        fputc(c + key, output);
+    }
+
+    fclose(input);
+    fclose(output);
+
+    printf("Encoded file saved as: %s\n", out_filename);
+}
+
+void ex_6() {
+    char str1[100], str2[100];
+    printf("Enter first string: ");
+    scanf("%s", str1);
+    printf("Enter second string: ");
+    scanf("%s", str2);
+
+    int count[26] = {0};
+
+    for (int i = 0; str1[i] != '\0'; i++)
+        if (isalpha(str1[i]))
+            count[tolower(str1[i]) - 'a']++;
+
+    for (int i = 0; str2[i] != '\0'; i++)
+        if (isalpha(str2[i]))
+            count[tolower(str2[i]) - 'a']--;
+
+    int anagram = 1;
+    for (int i = 0; i < 26; i++)
+        if (count[i] != 0) { anagram = 0; break; }
+
+    if (anagram)
+        printf("Anagram!\n");
+    else
+        printf("Not an anagram!\n");
+}
+
+//--------------**EXERCISE 7**--------------------------------------------------------------------------------------------
+
+#define MAX_EMPLOYEES 30
+#define TAX_RATE 0.0365
+#define OVERTIME_RATE 1.5
+#define REGULAR_HOURS 40
+
+typedef struct {
+    int id;
+    float hourly_pay;
+    float hours_worked;
+    float weekly_salary;
+} Employee;
+
+float calculate_salary(float hourly_pay, float hours_worked) {
+    float gross = 0;
+
+    if (hours_worked <= REGULAR_HOURS)
+        gross = hourly_pay * hours_worked;
+    else
+        gross = (hourly_pay * REGULAR_HOURS) +
+                (hourly_pay * OVERTIME_RATE * (hours_worked - REGULAR_HOURS));
+
+    return gross - (gross * TAX_RATE);
+}
+
+int count_employees(FILE *file) {
+    fseek(file, 0, SEEK_END);
+    return ftell(file) / sizeof(Employee);
+}
+
+void add_employee() {
+    FILE *file = fopen("employees.bin", "ab+");
+    if (file == NULL) {
+        printf("Could not open file!\n");
+        return;
+    }
+
+    int current_count = count_employees(file);
+    if (current_count >= MAX_EMPLOYEES) {
+        printf("Maximum number of employees (%d) reached!\n", MAX_EMPLOYEES);
+        fclose(file);
+        return;
+    }
+
+    Employee emp;
+    printf("Enter employee ID: ");
+    scanf("%d", &emp.id);
+    printf("Enter hourly pay: ");
+    scanf("%f", &emp.hourly_pay);
+    printf("Enter hours worked this week: ");
+    scanf("%f", &emp.hours_worked);
+
+    emp.weekly_salary = calculate_salary(emp.hourly_pay, emp.hours_worked);
+
+    fwrite(&emp, sizeof(Employee), 1, file);
+    printf("Employee added successfully!\n");
+
+    fclose(file);
+}
+
+void display_salaries() {
+    FILE *file = fopen("employees.bin", "rb");
+    if (file == NULL) {
+        printf("No employee file found!\n");
+        return;
+    }
+
+    int count = count_employees(file);
+    if (count == 0) {
+        printf("No employees on record!\n");
+        fclose(file);
+        return;
+    }
+
+    rewind(file); // go back to start after count_employees moved the pointer
+
+    printf("\n%-10s %-15s %-15s %-15s\n",
+           "ID", "Hourly Pay", "Hours Worked", "Weekly Salary");
+    printf("-------------------------------------------------------\n");
+
+    Employee emp;
+    while (fread(&emp, sizeof(Employee), 1, file) == 1) {
+        printf("%-10d %-15.2f %-15.2f %-15.2f\n",
+               emp.id, emp.hourly_pay, emp.hours_worked, emp.weekly_salary);
+    }
+
+    printf("-------------------------------------------------------\n");
+    printf("Total employees: %d\n", count);
+
+    fclose(file);
+}
+
+void display_menu() {
+    printf("\n===== EMPLOYEE MANAGEMENT =====\n");
+    printf("1. Add employee\n");
+    printf("2. Display all salaries\n");
+    printf("3. Exit\n");
+    printf("================================\n");
+    printf("Choice: ");
+}
+
+int main() {
+    int choice;
+
+    while (1) {
+        display_menu();
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1: add_employee();    break;
+            case 2: display_salaries(); break;
+            case 3:
+                printf("Goodbye!\n");
+                return 0;
+            default:
+                printf("Invalid choice!\n");
+        }
+    }
+
     return 0;
 }
